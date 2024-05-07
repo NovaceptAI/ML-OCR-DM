@@ -1,0 +1,6 @@
+Flask
+gunicorn  # or waitress if on Windows
+transformers
+torch
+sentencepiece
+tokenizers
