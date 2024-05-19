@@ -17,7 +17,7 @@ def upload_document():
 
     # Process the document here (e.g., save it, analyze it)
     # For demonstration, let's assume we save it temporarily
-    filepath = 'app/tmp' + file.filename
+    filepath = 'app/tmp/' + file.filename
     file.save(filepath)
 
     # Return a success response

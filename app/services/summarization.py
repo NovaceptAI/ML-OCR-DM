@@ -1,7 +1,7 @@
 # app/services/summarization.py
 
 from transformers import pipeline
-
+import PyPDF2
 # Initialize the summarization pipeline with a pre-trained model
 summarizer = pipeline("summarization")
 
@@ -17,9 +17,18 @@ def summarize(document_path):
         str: A summary of the document.
     """
     try:
-        # Open and read the document
-        with open(document_path, 'r', encoding='utf-8') as file:
-            content = file.read()
+        content = ""
+        # Check the file extension and read accordingly
+        if document_path.endswith('.pdf'):
+            # Open and read the PDF document
+            with open(document_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    content += page.extract_text() + "\n"
+        else:
+            # Open and read the text document
+            with open(document_path, 'r', encoding='utf-8') as file:
+                content = file.read()
 
         # Use the summarization model to generate a summary
         summary = summarizer(content, max_length=130, min_length=30, do_sample=False)
