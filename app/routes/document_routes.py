@@ -29,35 +29,15 @@ def upload_document():
 
 @document_blueprint.route('/analyze', methods=['POST'])
 def analyze_document():
-    """
-       Endpoint to analyze a PDF document by summarizing its content page by page.
-
-       Returns:
-           JSON: A JSON response containing the summarized content of the PDF document.
-    """
+    # This endpoint could be used to perform various analyses on the document
+    # For simplicity, let's assume the document's path is sent in JSON format
     data = request.get_json()
     document_path = data.get('document_path')
 
-    try:
-        summaries = []
-        if document_path.endswith('.pdf'):
-            with open(document_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                num_pages = len(pdf_reader.pages)
-                for page_num in range(num_pages):
-                    page_content = pdf_reader.pages[page_num].extract_text()
-                    input_length = len(page_content)
-                    max_length = min(2 * input_length, 130)  # Adjust max_length based on input length
-                    page_summary = summarization.summarizer(page_content, max_length=max_length, min_length=30,
-                                                            do_sample=False)
-                    summaries.append(page_summary[0]['summary_text'])
+    # Perform various analyses
+    summary = summarization.summarize(document_path)
 
-        full_summary = " ".join(summaries)
-        results = {'summary': full_summary}
-
-        return jsonify(results), 200
-
-    except Exception as e:
-        return jsonify({'error': f"Error in analyzing the document: {str(e)}"}), 500
+    # Return the analysis results
+    return jsonify(summary), 200
 
 # Additional routes can be added here for other functionalities

@@ -144,7 +144,7 @@ share/
 # Temporary files
 tmp/# created by virtualenv automatically
 
-
+/app/tmp
 !run.py
 !app/
 !tests/

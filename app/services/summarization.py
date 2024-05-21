@@ -1,5 +1,5 @@
 # app/services/summarization.py
-
+from flask import jsonify
 from transformers import pipeline
 import PyPDF2
 # Initialize the summarization pipeline with a pre-trained model
@@ -17,27 +17,23 @@ def summarize(document_path):
         str: A summary of the document.
     """
     try:
-        content = ""
-        # Check the file extension and read accordingly
+        summaries = []
         if document_path.endswith('.pdf'):
-            # Open and read the PDF document
             with open(document_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
-                for page in pdf_reader.pages:
-                    content += page.extract_text() + "\n"
-        else:
-            # Open and read the text document
-            with open(document_path, 'r', encoding='utf-8') as file:
-                content = file.read()
+                num_pages = len(pdf_reader.pages)
+                for page_num in range(num_pages):
+                    page_content = pdf_reader.pages[page_num].extract_text()
+                    input_length = len(page_content)
+                    max_length = round(input_length / 2)  # Adjust max_length based on input length
+                    page_summary = summarizer(page_content, max_length=max_length,
+                                                            min_length=round(max_length / 2), do_sample=False)
+                    summaries.append(page_summary[0]['summary_text'])
 
-        # Use the summarization model to generate a summary
-        summary = summarizer(content, max_length=130, min_length=30, do_sample=False)
+        full_summary = " ".join(summaries)
+        results = {'summary': full_summary}
 
-        # Extract the summary text
-        summary_text = summary[0]['summary_text']
-
-        return summary_text
+        return results
 
     except Exception as e:
-        # Handle errors in reading the file or summarizing
-        return f"Error in summarizing the document: {str(e)}"
+        return jsonify({'error': f"Error in analyzing the document: {str(e)}"}), 500
