@@ -5,10 +5,10 @@ from app.models.user import authenticate_user, insert_user
 auth_blueprint = Blueprint('auth', __name__)
 
 
-@auth_blueprint.route('/login', methods=['POST'])
-def login():
-    # Implement login logic here
-    return 'Login endpoint'
+# @auth_blueprint.route('/login', methods=['POST'])
+# def login():
+#     # Implement login logic here
+#     return 'Login endpoint'
 
 
 @auth_blueprint.route('/signup', methods=['POST'])
@@ -21,9 +21,9 @@ def signup():
     return jsonify(response), 200
 
 
-@auth_blueprint.route('/login_signup', methods=['POST'])
-def login_signup():
-    username = request.form.get("email")
+@auth_blueprint.route('/login', methods=['POST'])
+def login():
+    username = request.form.get("username")
     login_password = request.form.get("login_password")
     mail_check = authenticate_user(username, login_password)
     if mail_check == "Login Success":

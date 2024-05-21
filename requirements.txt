@@ -1,6 +1,8 @@
-Flask
+Flask~=3.0.3
 gunicorn  # or waitress if on Windows
-transformers
+transformers~=4.40.1
 torch
 sentencepiece
 tokenizers
+pymongo~=4.7.2
+pypdf2~=3.0.1

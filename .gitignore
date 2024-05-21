@@ -124,13 +124,13 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
+Library/
 # Pyre type checker
 .pyre/
-
+.idea/
 # profiling files
 .prof
-
+Scripts/
 # VS Code settings
 .vscode/
 
@@ -140,7 +140,7 @@ node_modules/
 # Logs
 logs/
 *.log
-
+share/
 # Temporary files
 tmp/# created by virtualenv automatically
 
