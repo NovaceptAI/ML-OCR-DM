@@ -35,9 +35,17 @@ def analyze_document():
     document_path = data.get('document_path')
 
     # Perform various analyses
-    summary = summarization.summarize(document_path)
+    # summary = summarization.summarize_document(document_path)
+    segments = segmentation.segment_text(document_path)
+
+    # Specify the file path where you want to save the text
+    file_path = "output_segments.txt"
+
+    with open(file_path, "w", encoding="utf-8") as file:
+        for segment, text in segments.items():
+            file.write(f"{segment}:\n{text}\n\n")
 
     # Return the analysis results
-    return jsonify(summary), 200
+    return jsonify(segments), 200
 
 # Additional routes can be added here for other functionalities

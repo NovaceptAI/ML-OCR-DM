@@ -2,38 +2,44 @@
 from flask import jsonify
 from transformers import pipeline
 import PyPDF2
+import docx
+import textract
+
 # Initialize the summarization pipeline with a pre-trained model
 summarizer = pipeline("summarization")
 
 
-def summarize(document_path):
-    """
-    Summarizes the content of a document.
+def extract_text_from_document(document_path):
+    if document_path.endswith('.pdf'):
+        with open(document_path, 'rb') as file:
+            pdf_reader = PyPDF2.PdfReader(file)
+            num_pages = len(pdf_reader.pages)
+            text = ""
+            for page_num in range(num_pages):
+                text += pdf_reader.pages[page_num].extract_text()
+    elif document_path.endswith('.docx'):
+        doc = docx.Document(document_path)
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+    elif document_path.endswith('.txt'):
+        with open(document_path, 'r') as file:
+            text = file.read()
+    else:
+        # Handle other document types here
+        text = textract.process(document_path).decode('utf-8')
 
-    Args:
-        document_path (str): The file path to the document to be summarized.
+    return text
 
-    Returns:
-        str: A summary of the document.
-    """
+
+def summarize_document(document_path):
     try:
-        summaries = []
-        if document_path.endswith('.pdf'):
-            with open(document_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                num_pages = len(pdf_reader.pages)
-                for page_num in range(num_pages):
-                    page_content = pdf_reader.pages[page_num].extract_text()
-                    input_length = len(page_content)
-                    max_length = round(input_length / 2)  # Adjust max_length based on input length
-                    page_summary = summarizer(page_content, max_length=max_length,
-                                                            min_length=round(max_length / 2), do_sample=False)
-                    summaries.append(page_summary[0]['summary_text'])
-
-        full_summary = " ".join(summaries)
+        text = extract_text_from_document(document_path)
+        input_length = len(text)
+        max_length = round(input_length / 2)
+        page_summary = summarizer(text, max_length=max_length, min_length=round(max_length / 2), do_sample=False)
+        full_summary = page_summary[0]['summary_text']
         results = {'summary': full_summary}
 
         return results
 
     except Exception as e:
-        return jsonify({'error': f"Error in analyzing the document: {str(e)}"}), 500
+        return {'error': f"Error in analyzing the document: {str(e)}"}, 500
