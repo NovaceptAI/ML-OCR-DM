@@ -143,9 +143,11 @@ logs/
 share/
 # Temporary files
 tmp/# created by virtualenv automatically
-
+/app/rough_script.py
 /app/tmp
+output_segments.txt
 !run.py
 !app/
 !tests/
 !requirements.txt
+

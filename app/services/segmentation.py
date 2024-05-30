@@ -4,13 +4,18 @@ from app.services.summarization import extract_text_from_document
 
 
 def segment_text(document_path):
-    text = extract_text_from_document(document_path)
+    page_texts, text = extract_text_from_document(document_path)
     text_length = len(text)
     num_segments = max(1, round(text_length / 1000))
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform([text])
 
     if tfidf_matrix.shape[0] <= num_segments:
+        # Specify the file path where you want to save the text
+        file_path = "output_segments.txt"
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(text)
         return {"Segment 1": text}  # Return the entire text as a single segment
 
     kmeans = KMeans(n_clusters=num_segments, random_state=0)
@@ -21,6 +26,13 @@ def segment_text(document_path):
         if label not in segments:
             segments[label] = []
         segments[label].append(i)
+
+    # Specify the file path where you want to save the text
+    file_path = "output_segments.txt"
+
+    with open(file_path, "w", encoding="utf-8") as file:
+        for segment, text in segments.items():
+            file.write(f"{segment}:\n{text}\n\n")
 
     segmented_text = {}
     for label, indices in segments.items():

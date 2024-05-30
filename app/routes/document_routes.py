@@ -33,19 +33,58 @@ def analyze_document():
     # For simplicity, let's assume the document's path is sent in JSON format
     data = request.get_json()
     document_path = data.get('document_path')
+    feature = data.get('feature')
 
     # Perform various analyses
-    # summary = summarization.summarize_document(document_path)
-    segments = segmentation.segment_text(document_path)
+    if feature == "Summarization":
+        summary = summarization.summarize_document(document_path)
+        return jsonify(summary)
 
-    # Specify the file path where you want to save the text
-    file_path = "output_segments.txt"
+    if feature == "Segmentation":
+        segments = segmentation.segment_text(document_path)
+        # Return the analysis results
+        return jsonify(segments), 200
 
-    with open(file_path, "w", encoding="utf-8") as file:
-        for segment, text in segments.items():
-            file.write(f"{segment}:\n{text}\n\n")
+    if feature == "Sentiment":
+        sentence_sentiments = sentiment_analysis.perform_sentiment_analysis(document_path)
 
-    # Return the analysis results
-    return jsonify(segments), 200
+        # Save sentiment analysis results to a text file
+        output_file_path = "sentiment_analysis_results.txt"
+
+        with open(output_file_path, 'w') as output_file:
+            output_file.write("Sentiment Analysis Results - Sentences:\n")
+            for i, sentiment in enumerate(sentence_sentiments):
+                sentiment_label = "Positive" if sentiment > 0 else "Negative" if sentiment < 0 else "Neutral"
+                output_file.write(f"Sentence {i + 1}: Sentiment - {sentiment} ({sentiment_label})\n")
+
+        # output_file.write("\nSentiment Analysis Results - Paragraphs:\n")
+
+        output_statement = f"Sentiment analysis results saved to {output_file_path}"
+        return output_statement
+
+    if feature == "Chronology":
+        chronolog = chronology.timed_events(document_path)
+        return jsonify(chronolog)
+
+    if feature == "Entity":
+        entities = entity_resolution.find_entities(document_path, threshold=0.8)
+        return jsonify(entities)
+
+    if feature == "Keyword":
+        keywords = keyword_search.search(document_path)
+        return jsonify(keywords)
+
+    if feature == "TopicModelling":
+        topics = topic_modelling.perform_topic_modeling(document_path)
+        return jsonify(topics)
+
+    if feature == "Similarity":
+        similar = similarity.get_similarity(document_path, threshold=0.8)
+        return jsonify(similar)
+
+    else:
+        return "Feature Not Available"
+
+
 
 # Additional routes can be added here for other functionalities
