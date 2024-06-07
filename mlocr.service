@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve your Flask application
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/ML-OCR-DM/
+Environment="PATH=/home/ubuntu/ML-OCR-DM/"
+ExecStart=/home/ubuntu/ML-OCR-DM/gunicorn --workers 3 --bind unix:yourapp.sock -m 007 wsgi:app
+
+[Install]
+WantedBy=multi-user.target

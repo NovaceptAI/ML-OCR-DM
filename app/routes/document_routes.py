@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify
 from app.services import summarization, segmentation, sentiment_analysis, topic_modelling, similarity, chronology, \
     entity_resolution, keyword_search
-import PyPDF2
+import PyPDF2, uuid
 
 # Create a Blueprint for document-related routes
 document_blueprint = Blueprint('documents', __name__)
@@ -35,9 +35,16 @@ def analyze_document():
     document_path = data.get('document_path')
     feature = data.get('feature')
 
+    # Generate a UUID
+    unique_filename = str(uuid.uuid4()) + ".txt"
+
+    # Create the file with the UUID as its name
+    with open(unique_filename, 'w') as f:
+        f.write("")
+
     # Perform various analyses
     if feature == "Summarization":
-        summary = summarization.summarize_document(document_path)
+        summary = summarization.summarize_document(document_path, unique_filename)
         return jsonify(summary)
 
     if feature == "Segmentation":
