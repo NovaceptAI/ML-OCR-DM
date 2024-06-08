@@ -1,9 +1,8 @@
+import os
+import uuid
+import boto3
 from textblob import TextBlob
 import PyPDF2
-import boto3
-import uuid
-import os
-from app.services.summarization import extract_text_from_document
 from app.config.config import get_aws_creds
 
 
@@ -22,11 +21,20 @@ def perform_analysis(document_path):
     blob = TextBlob(text)
 
     # Sentiment analysis at the sentence level
-    sentence_sentiments = [(str(sentence), sentence.sentiment.polarity) for sentence in blob.sentences]
+    sentence_sentiments = []
+    for sentence in blob.sentences:
+        polarity = sentence.sentiment.polarity
+        sentiment = "positive" if polarity > 0 else "negative" if polarity < 0 else "neutral"
+        sentence_sentiments.append({"sentence": str(sentence), "score": polarity, "sentiment": sentiment})
 
     # Sentiment analysis at the paragraph level
     paragraphs = text.split('\n\n')  # Assuming paragraphs are separated by double newlines
-    paragraph_sentiments = [(paragraph, TextBlob(paragraph).sentiment.polarity) for paragraph in paragraphs]
+    paragraph_sentiments = []
+    for paragraph in paragraphs:
+        blob_paragraph = TextBlob(paragraph)
+        polarity = blob_paragraph.sentiment.polarity
+        sentiment = "positive" if polarity > 0 else "negative" if polarity < 0 else "neutral"
+        paragraph_sentiments.append({"paragraph": paragraph, "score": polarity, "sentiment": sentiment})
 
     return sentence_sentiments, paragraph_sentiments
 
@@ -35,12 +43,14 @@ def save_sentiment_to_file(sentence_sentiments, paragraph_sentiments, output_fil
     try:
         with open(output_file, "w", encoding="utf-8") as file:
             file.write("Sentence Sentiments:\n")
-            for sentence, sentiment in sentence_sentiments:
-                file.write(f"Sentence: {sentence}\nSentiment: {sentiment}\n\n")
+            for entry in sentence_sentiments:
+                file.write(
+                    f"Sentence: {entry['sentence']}\nScore: {entry['score']}\nSentiment: {entry['sentiment']}\n\n")
 
             file.write("Paragraph Sentiments:\n")
-            for paragraph, sentiment in paragraph_sentiments:
-                file.write(f"Paragraph: {paragraph}\nSentiment: {sentiment}\n\n")
+            for entry in paragraph_sentiments:
+                file.write(
+                    f"Paragraph: {entry['paragraph']}\nScore: {entry['score']}\nSentiment: {entry['sentiment']}\n\n")
         return True
     except Exception as e:
         print(f"Failed to save sentiment analysis to file: {e}")
@@ -69,6 +79,10 @@ def upload_to_s3(file_path, s3_filename):
 
 
 def perform_sentiment_analysis(document_path):
+    # Check if the file exists at the document path
+    if not os.path.exists(document_path):
+        return {"error": "No file present at the specified document path"}
+
     sentence_sentiments, paragraph_sentiments = perform_analysis(document_path)
     unique_filename = str(uuid.uuid4()) + "_sentiment_analysis.txt"
     output_file = "app/tmp/" + unique_filename
@@ -88,10 +102,3 @@ def perform_sentiment_analysis(document_path):
             return {"error": "Failed to upload file to S3"}
     else:
         return {"error": "Failed to save sentiment analysis to file"}
-
-# Example usage
-# if __name__ == "__main__":
-#     document_path = "/mnt/data/your_document.pdf"  # Update this with the path to your document
-#     bucket_name = "your-s3-bucket-name"  # Replace with your S3 bucket name
-#     result = main(document_path, bucket_name)
-#     print(result)
