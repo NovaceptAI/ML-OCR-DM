@@ -133,7 +133,7 @@ Library/
 Scripts/
 # VS Code settings
 .vscode/
-
+bart-large-cnn/
 # Node modules (if using with Flask for full-stack)
 node_modules/
 
@@ -146,7 +146,7 @@ tmp/# created by virtualenv automatically
 /app/rough_script.py
 /app/tmp
 output_segments.txt
-!run.py
+run.py
 !app/
 !tests/
 !requirements.txt

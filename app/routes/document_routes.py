@@ -11,20 +11,26 @@ document_blueprint = Blueprint('documents', __name__)
 
 @document_blueprint.route('/upload', methods=['POST'])
 def upload_document():
-    # Assume the document is sent via a form with the name 'document'
-    file = request.files.get('document')
-    if not file:
-        return jsonify({'error': 'No document uploaded'}), 400
+    # Assume the documents are sent via a form with the name 'document'
+    files = request.files.getlist('document')
+    if not files:
+        return jsonify({'error': 'No documents uploaded'}), 400
 
-    # Replace spaces in the file name with underscores
-    new_filename = file.filename.replace(" ", "_")
+    file_paths = []
 
-    # Process the document here (e.g., save it, analyze it)
-    # For demonstration, let's assume we save it temporarily with the modified file name
-    filepath = 'app/tmp/' + new_filename
-    file.save(filepath)
+    for file in files:
+        if file:
+            # Replace spaces in the file name with underscores
+            new_filename = file.filename.replace(" ", "_")
 
-    return jsonify({'message': 'Document uploaded successfully', 'filename': file.filename, 'path': filepath}), 200
+            # Save the file temporarily with the modified file name
+            filepath = 'app/tmp/' + new_filename
+            file.save(filepath)
+
+            # Collect the file path
+            file_paths.append(filepath)
+
+    return jsonify({'message': 'Documents uploaded successfully', 'file_paths': file_paths}), 200
 
 
 @document_blueprint.route('/analyze', methods=['POST'])
@@ -91,7 +97,6 @@ def analyze_document():
 
     else:
         return "Feature Not Available"
-
 
 
 # Additional routes can be added here for other functionalities

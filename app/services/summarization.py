@@ -1,13 +1,33 @@
 import fitz  # PyMuPDF
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import LongformerTokenizer, LongformerForSequenceClassification
 import os
 import docx
 import re
 import boto3
 from botocore.exceptions import NoCredentialsError
 
+# Configure AWS credentials
+aws_access_key_id = 'AKIAVRUVQANFUJNOWIUW'
+aws_secret_access_key = '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'
+aws_region = 'us-east-1'
+bucket_name = "digimachine"
+
 # Initialize S3 client
-s3 = boto3.client('s3')
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=aws_region
+)
+
+model_dir = "C:\\Users\\novneet.patnaik\\Documents\\GitHub\\ML-OCR-DM\\bart-large-cnn"
+
+# Initialize the summarizer with a model and tokenizer from the local directory
+tokenizer = AutoTokenizer.from_pretrained(model_dir)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_dir)
+summarizer = pipeline("summarization", model=model, tokenizer=tokenizer, device=-1)
+
 
 def extract_text_from_document(pdf_path):
     """
@@ -18,7 +38,7 @@ def extract_text_from_document(pdf_path):
     except Exception as e:
         raise FileNotFoundError(f"Failed to open PDF file: {e}")
 
-    if len(document) == 0:  
+    if len(document) == 0:
         raise ValueError("The PDF file is empty.")
 
     text = ""
@@ -28,8 +48,9 @@ def extract_text_from_document(pdf_path):
 
     if not text.strip():
         raise ValueError("The extracted text is empty.")
-    
+
     return text
+
 
 def extract_text_from_docx(docx_path):
     """
@@ -47,8 +68,9 @@ def extract_text_from_docx(docx_path):
 
     if not text.strip():
         raise ValueError("The extracted text is empty.")
-    
+
     return text
+
 
 def extract_text_from_txt(txt_path):
     """
@@ -62,8 +84,9 @@ def extract_text_from_txt(txt_path):
 
     if not text.strip():
         raise ValueError("The TXT file is empty.")
-    
+
     return text
+
 
 def identify_sections(text):
     """
@@ -83,37 +106,51 @@ def identify_sections(text):
             sections[current_section] = ""
         else:
             sections[current_section] += line + " "
-    
+
     return sections
 
-def summarize_section(section_text, summarizer):
+
+def chunk_text(text, tokenizer, max_length):
+    """
+    Splits the input text into chunks based on tokenization.
+    """
+    tokens = tokenizer.encode(text, truncation=True, max_length=max_length)
+    chunks = []
+    for i in range(0, len(tokens), max_length):
+        chunks.append(tokens[i:i + max_length])
+    return chunks
+
+
+def summarize_section(section_text, summarizer, tokenizer, max_length=1024):
     """
     Summarize a section of text using the transformers pipeline.
     """
-    try:
-        summary = summarizer(section_text, max_length=150, min_length=30, do_sample=False)
-        return summary[0]['summary_text']
-    except Exception as e:
-        raise RuntimeError(f"Failed to summarize section: {e}")
+    chunks = chunk_text(section_text, tokenizer, max_length)
+    chunk_summaries = [
+        summarizer(tokenizer.decode(chunk), max_length=max_length, min_length=30, do_sample=False)[0]['summary_text']
+        for chunk in chunks]
+    return ' '.join(chunk_summaries)
 
-def summarize_text(text, summarizer):
+
+def summarize_text(text, summarizer, tokenizer, max_length=1024):
     """
     Summarize the extracted text into structured sections.
     """
     sections = identify_sections(text)
     summary = {}
-    
+
     for section, content in sections.items():
-        summary[section] = summarize_section(content, summarizer)
-    
+        summary[section] = summarize_section(content, summarizer, tokenizer, max_length)
+
     return summary
+
 
 def save_summary_to_file(summary, output_file):
     """
     Save the summarized sections to a text file.
     """
     try:
-        with open(output_file, 'w') as f:
+        with open(output_file, 'w', encoding='utf-8') as f:
             for section, content in summary.items():
                 f.write(f"{section}\n")
                 f.write(f"{content.strip()}\n\n")
@@ -151,20 +188,20 @@ def summarize_document(file_path, output_file):
             text = extract_text_from_txt(file_path)
         else:
             raise ValueError("Unsupported file format. Please upload a PDF, DOCX, or TXT file.")
-        
+
         print("Summarizing text...")
-        summarizer = pipeline("summarization")
-        summary = summarize_text(text, summarizer)
-        
+        summary = summarize_text(text, summarizer, tokenizer, max_length=1024)
+
         print("Saving summary to file...")
         save_summary_to_file(summary, output_file)
 
         print("Uploading summary to S3...")
-        download_link = upload_to_s3(output_file, "digimachine")
-        
-        print("Summary saved successfully.")
-        return download_link
+        download_link = upload_to_s3(output_file, bucket_name)
 
+        if download_link:
+            print(f"Summary saved successfully. Download link: {download_link}")
+        else:
+            print("Failed to upload summary to S3.")
     except FileNotFoundError as e:
         print(f"Error: {e}")
     except ValueError as e:
