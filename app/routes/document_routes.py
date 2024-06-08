@@ -1,4 +1,5 @@
 # app/routes/document_routes.py
+import os
 
 from flask import Blueprint, request, jsonify
 from app.services import summarization, segmentation, sentiment_analysis, topic_modelling, similarity, chronology, \
@@ -39,6 +40,11 @@ def analyze_document():
     # For simplicity, let's assume the document's path is sent in JSON format
     data = request.get_json()
     document_path = data.get('document_path')
+
+    # Check if file is present
+    if not os.path.exists(document_path):
+        return {"error": "No file present at the specified document path"}
+
     feature = data.get('feature')
 
     # Generate a UUID
@@ -59,21 +65,8 @@ def analyze_document():
         return jsonify(segments), 200
 
     if feature == "Sentiment":
-        sentence_sentiments = sentiment_analysis.perform_sentiment_analysis(document_path)
-
-        # Save sentiment analysis results to a text file
-        output_file_path = "sentiment_analysis_results.txt"
-
-        with open(output_file_path, 'w') as output_file:
-            output_file.write("Sentiment Analysis Results - Sentences:\n")
-            for i, sentiment in enumerate(sentence_sentiments):
-                sentiment_label = "Positive" if sentiment > 0 else "Negative" if sentiment < 0 else "Neutral"
-                output_file.write(f"Sentence {i + 1}: Sentiment - {sentiment} ({sentiment_label})\n")
-
-        # output_file.write("\nSentiment Analysis Results - Paragraphs:\n")
-
-        output_statement = f"Sentiment analysis results saved to {output_file_path}"
-        return output_statement
+        analysis = sentiment_analysis.perform_sentiment_analysis(document_path)
+        return analysis
 
     if feature == "Chronology":
         chronolog = chronology.timed_events(document_path)
