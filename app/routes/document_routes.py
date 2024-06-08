@@ -73,7 +73,7 @@ def analyze_document():
         return jsonify(chronolog)
 
     if feature == "Entity":
-        entities = entity_resolution.find_entities(document_path, threshold=0.8)
+        entities = entity_resolution.find_entities(document_path)
         return jsonify(entities)
 
     if feature == "Keyword":
