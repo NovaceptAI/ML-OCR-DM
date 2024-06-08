@@ -1,9 +1,13 @@
 import re
-
+import os
+import json
+import uuid
 from gensim import corpora, models
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import boto3
 from app.services.summarization import extract_text_from_document
+from app.config.config import get_aws_creds
 
 # Define custom stop words to exclude from topics
 custom_stopwords = set(
@@ -11,14 +15,15 @@ custom_stopwords = set(
 
 
 def preprocess_text(text):
-    # Tokenize text and remove stop words and non-alphabetic words
+    """Tokenizes text and removes stop words and non-alphabetic words."""
     tokens = word_tokenize(text)
     filtered_tokens = [word.lower() for word in tokens if word.isalpha() and word.lower() not in custom_stopwords]
     return filtered_tokens
 
 
-def perform_topic_modeling(document_path):
-    page_texts, complete_text = extract_text_from_document(document_path)
+def topic_modeling(document_path):
+    """Performs topic modeling on the provided document."""
+    complete_text = extract_text_from_document(document_path)
 
     # Preprocess the complete text
     processed_text = preprocess_text(complete_text)
@@ -35,13 +40,14 @@ def perform_topic_modeling(document_path):
     # Get the topics
     topics = lda_model.print_topics(num_words=10)
 
-    # final_topics = filter_topics(topics)  # Implement your filter_topics function here
+    # Filter topics
+    filtered_topics = filter_topics(topics)
 
-    return topics
+    return filtered_topics
 
 
-# Define a function to filter out stop words and punctuation
 def filter_topics(topic_results):
+    """Filters out stop words and punctuation from the topic results."""
     filtered_topics = []
     stop_words = {"the", "of", "to", "and", "in", "on", "for"}  # Add more stop words as needed
 
@@ -51,3 +57,57 @@ def filter_topics(topic_results):
         filtered_topics.append([topic_id, filtered_words[:4]])  # Select top 4 meaningful words
 
     return filtered_topics
+
+
+def save_to_s3(data):
+    """Saves the data to an S3 bucket and returns the S3 URL."""
+    aws_creds = get_aws_creds()
+    if not aws_creds:
+        return None
+
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=aws_creds['aws_access_key_id'],
+        aws_secret_access_key=aws_creds['aws_secret_access_key'],
+        region_name=aws_creds['region_name']
+    )
+
+    bucket_name = aws_creds['bucket_name']
+    unique_filename = str(uuid.uuid4()) + "_topic_modeling.json"
+    local_path = "app/tmp/" + unique_filename
+
+    with open(local_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+    try:
+        s3.upload_file(local_path, bucket_name, unique_filename)
+        s3_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_filename}"
+        return s3_url
+    except Exception as e:
+        print(f"Failed to upload file to S3: {e}")
+        return None
+    finally:
+        if os.path.exists(local_path):
+            os.remove(local_path)
+
+
+def perform_topic_modeling(document_path):
+    """Main function to perform topic modeling, save results to S3, and return the response."""
+    topics = topic_modeling(document_path)
+
+    s3_url = save_to_s3(topics)
+
+    if s3_url:
+        return {
+            "message": "Topic modeling done and results uploaded successfully",
+            "s3_url": s3_url,
+            "topics": topics
+        }
+    else:
+        return {"error": "Failed to upload results to S3"}
+
+# Example usage
+# document_path = 'C:\\Users\\novneet.patnaik\\Documents\\GitHub\\ML-OCR-DM\\app\\tmp\\CRO_Beginners_Guide.pdf'
+# bucket_name = 'your-s3-bucket-name'
+# result = main(document_path, bucket_name)
+# print(result)
