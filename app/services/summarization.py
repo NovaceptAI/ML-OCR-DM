@@ -6,20 +6,28 @@ import docx
 import re
 import boto3
 from botocore.exceptions import NoCredentialsError
+from app.config.config import get_aws_creds
+
+aws_creds = get_aws_creds()
 
 # Configure AWS credentials
-aws_access_key_id = 'AKIAVRUVQANFUJNOWIUW'
-aws_secret_access_key = '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'
-aws_region = 'us-east-1'
-bucket_name = "digimachine"
+if aws_creds:
+    aws_access_key_id = aws_creds['aws_access_key_id']
+    aws_secret_access_key = aws_creds['aws_secret_access_key']
+    bucket_name = aws_creds['bucket_name']
+    region_name = aws_creds['region_name']
 
-# Initialize S3 client
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-    region_name=aws_region
-)
+    # Initialize S3 client
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=region_name
+    )
+
+    # Now you can use these credentials for AWS operations
+else:
+    print("Failed to retrieve AWS credentials.")
 
 model_dir = "C:\\Users\\novneet.patnaik\\Documents\\GitHub\\ML-OCR-DM\\bart-large-cnn"
 

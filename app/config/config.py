@@ -1,6 +1,12 @@
 # app/config.py
 
 import os
+import logging
+from app.config.db_config import db
+
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -40,3 +46,31 @@ def get_config(env):
         return TestingConfig
     else:
         return DevelopmentConfig
+
+
+def get_aws_creds():
+    try:
+        creds_cursor = db.creds.find_one({"service": "aws"})
+        if creds_cursor:
+            aws_access_key_id = creds_cursor.get('aws_access_key_id')
+            aws_secret_access_key = creds_cursor.get('aws_secret_access_key')
+            bucket_name = creds_cursor.get('bucket_name')
+            region_name = creds_cursor.get('region_name')
+
+            if all([aws_access_key_id, aws_secret_access_key, bucket_name, region_name]):
+                logger.info("AWS credentials retrieved successfully.")
+                return {
+                    "aws_access_key_id": aws_access_key_id,
+                    "aws_secret_access_key": aws_secret_access_key,
+                    "bucket_name": bucket_name,
+                    "region_name": region_name
+                }
+            else:
+                logger.error("Incomplete AWS credentials found.")
+                return None
+        else:
+            logger.error("AWS credentials not found in the database.")
+            return None
+    except Exception as e:
+        logger.error(f"Error retrieving AWS credentials: {e}")
+        return None

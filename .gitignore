@@ -150,4 +150,6 @@ run.py
 !app/
 !tests/
 !requirements.txt
-
+sentiment_analysis_results.txt
+summary_output.txt
+pyvenv.cfg
