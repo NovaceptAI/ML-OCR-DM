@@ -77,7 +77,8 @@ def analyze_document():
         return jsonify(entities)
 
     if feature == "Keyword":
-        keywords = keyword_search.search(document_path)
+        keyword_list = data.get('keywords')
+        keywords = keyword_search.search(document_path, keyword_list)
         return jsonify(keywords)
 
     if feature == "TopicModelling":
